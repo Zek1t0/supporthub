@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
 
 namespace SupportHub.Api.Tests;
 
@@ -9,8 +10,14 @@ public class ApiSmokeTests : IClassFixture<WebApplicationFactory<Program>>
 
     public ApiSmokeTests(WebApplicationFactory<Program> factory)
     {
-        _client = factory.CreateClient();
+        var testingFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+        });
+
+        _client = testingFactory.CreateClient();
     }
+
 
     [Fact]
     public async Task GET_weatherforecast_returns_200_ok()
@@ -19,5 +26,13 @@ public class ApiSmokeTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GET_health_returns_200_ok()
+    {
+        var response = await _client.GetAsync("/health");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
 }
 
