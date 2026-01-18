@@ -50,6 +50,29 @@ app.MapGet("/weatherforecast", () =>
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
+// POST /tickets: create a new support ticket
+app.MapPost("/tickets", (CreateTicketRequest request) =>
+{
+    // Basic validation
+    if (string.IsNullOrWhiteSpace(request.Title))
+    {
+        return Results.BadRequest(new { error = "Title is required." });
+    }
+
+    var ticket = new Ticket
+    {
+        Id = Guid.NewGuid(),
+        Title = request.Title.Trim(),
+        Status = "Open",
+        Priority = "Medium",
+        CreatedAt = DateTime.UtcNow
+    };
+
+    tickets.Add(ticket);
+// 201 Created + get ticket by id endpoint
+    return Results.Created($"/tickets/{ticket.Id}", ticket);
+});
+
 app.MapGet("/tickets", () => Results.Ok(tickets));
 
 app.Run();

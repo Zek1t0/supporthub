@@ -44,5 +44,25 @@ public class ApiSmokeTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.NotNull(body);
         Assert.True(body!.Count > 0);
     }   
+    [Fact]
+    public async Task POST_tickets_with_title_returns_201_created()
+    {
+        var payload = new { title = "Ticket desde test"};
+
+        var response = await _client.PostAsJsonAsync("/tickets", payload);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    }
+    [Fact]
+    public async Task POST_tickets_without_title_returns_400()
+    {
+        var payload = new { title = ""};
+
+        var response = await _client.PostAsJsonAsync("/tickets", payload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    }
 }
 
