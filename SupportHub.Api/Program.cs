@@ -1,3 +1,5 @@
+using SupportHub.Api.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -24,6 +26,12 @@ var summaries = new[]
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
 
+var tickets = new List<Ticket>
+{
+    new Ticket { Id = Guid.NewGuid(), Title = "No puedo iniciar sesión", Status = "Open", Priority = "High" },
+    new Ticket { Id = Guid.NewGuid(), Title = "Bug en el checkout", Status = "InProgress", Priority = "Urgent" }
+};
+
 app.MapGet("/weatherforecast", () =>
 {
     var forecast = Enumerable.Range(1, 5).Select(index =>
@@ -42,7 +50,10 @@ app.MapGet("/weatherforecast", () =>
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
+app.MapGet("/tickets", () => Results.Ok(tickets));
+
 app.Run();
+
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
 
@@ -33,6 +34,15 @@ public class ApiSmokeTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await _client.GetAsync("/health");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+    [Fact]
+    public async Task GET_tickets_returns_200_and_list()
+    {
+        var response = await _client.GetAsync("/tickets");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
+        var body = await response.Content.ReadFromJsonAsync<List<object>>();
+        Assert.NotNull(body);
+        Assert.True(body!.Count > 0);
+    }   
 }
 
