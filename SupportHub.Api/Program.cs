@@ -75,6 +75,29 @@ app.MapPost("/tickets", (CreateTicketRequest request) =>
 
 app.MapGet("/tickets", () => Results.Ok(tickets));
 
+app.MapGet("/tickets/{id:guid}", (Guid id) =>
+{
+    var ticket = tickets.FirstOrDefault(t => t.Id == id);
+    return ticket is null ? Results.NotFound() : Results.Ok(ticket);
+});
+
+app.MapPatch("/tickets/{id:guid}/status", (Guid id, UpdateTicketStatusRequest request) =>
+{
+    var ticket = tickets.FirstOrDefault(t => t.Id == id);
+    if (ticket is null) return Results.NotFound();
+
+    if (string.IsNullOrWhiteSpace(request.Status))
+        return Results.BadRequest(new { error = "Status is required." });
+
+    // estados válidos
+    var valid = new[] { "Open", "InProgress", "Resolved" };
+    if (!valid.Contains(request.Status.Trim()))
+        return Results.BadRequest(new { error = "Invalid status." });
+
+    ticket.Status = request.Status.Trim();
+    return Results.Ok(ticket);
+});
+
 app.Run();
 
 

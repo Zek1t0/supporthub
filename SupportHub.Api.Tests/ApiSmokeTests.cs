@@ -45,6 +45,23 @@ public class ApiSmokeTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.True(body!.Count > 0);
     }   
     [Fact]
+    public async Task GET_ticket_by_id_returns_200_when_ex()
+    {
+        // Se crea un ticket primero
+        var create = await _client.PostAsJsonAsync("/tickets", new { title = "Buscar por id" });
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+
+        // Se obtiene el id del ticket creado leyendo el body
+        var createdTicket = await create.Content.ReadFromJsonAsync<TicketResponse>();
+        Assert.NotNull(createdTicket);
+
+        // Pedimos el ticket por id
+        var get = await _client.GetAsync($"/tickets/{createdTicket!.id}");
+        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+    }
+    private record TicketResponse(Guid id, string title, string status, string priority);
+
+    [Fact]
     public async Task POST_tickets_with_title_returns_201_created()
     {
         var payload = new { title = "Ticket desde test"};
@@ -64,5 +81,16 @@ public class ApiSmokeTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
     }
+    [Fact]
+    public async Task PATCH_ticket_status_changes_status()
+    {
+        var create = await _client.PostAsJsonAsync("/tickets", new { title = "Cambiar estado" });
+        var created = await create.Content.ReadFromJsonAsync<TicketResponse>();
+        Assert.NotNull(created);
+
+        var patch = await _client.PatchAsJsonAsync($"/tickets/{created!.id}/status", new { status = "Resolved" });
+        Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
+    }
+
 }
 
