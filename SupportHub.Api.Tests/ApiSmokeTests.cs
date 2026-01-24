@@ -37,13 +37,24 @@ public class ApiSmokeTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task GET_tickets_returns_200_and_list()
     {
-        var response = await _client.GetAsync("/tickets");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // 1) Arrange: creo un ticket
+        var create = await _client.PostAsJsonAsync("/tickets", new { title = "seed from list test" });
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
 
-        var body = await response.Content.ReadFromJsonAsync<List<object>>();
-        Assert.NotNull(body);
-        Assert.True(body!.Count > 0);
-    }   
+        var created = await create.Content.ReadFromJsonAsync<TicketResponse>();
+        Assert.NotNull(created);
+
+        // 2) Act: pido la lista
+        var res = await _client.GetAsync("/tickets");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+
+        var list = await res.Content.ReadFromJsonAsync<List<TicketResponse>>();
+        Assert.NotNull(list);
+
+        // 3) Assert: la lista contiene el ticket que creé
+        Assert.Contains(list!, t => t.id == created!.id);
+    }
+
     [Fact]
     public async Task GET_ticket_by_id_returns_200_when_ex()
     {

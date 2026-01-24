@@ -1,6 +1,10 @@
 using SupportHub.Api.Models;
+using Microsoft.EntityFrameworkCore;
+using SupportHub.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -26,12 +30,6 @@ var summaries = new[]
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
 
-var tickets = new List<Ticket>
-{
-    new Ticket { Id = Guid.NewGuid(), Title = "No puedo iniciar sesión", Status = "Open", Priority = "High" },
-    new Ticket { Id = Guid.NewGuid(), Title = "Bug en el checkout", Status = "InProgress", Priority = "Urgent" }
-};
-
 app.MapGet("/weatherforecast", () =>
 {
     var forecast = Enumerable.Range(1, 5).Select(index =>
@@ -51,13 +49,10 @@ app.MapGet("/weatherforecast", () =>
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 // POST /tickets: create a new support ticket
-app.MapPost("/tickets", (CreateTicketRequest request) =>
+app.MapPost("/tickets", async (AppDbContext db, CreateTicketRequest request) =>
 {
-    // Basic validation
     if (string.IsNullOrWhiteSpace(request.Title))
-    {
-        return Results.BadRequest(new { error = "Title is required." });
-    }
+        return Results.BadRequest(new { error = "Title is required" });
 
     var ticket = new Ticket
     {
@@ -68,35 +63,44 @@ app.MapPost("/tickets", (CreateTicketRequest request) =>
         CreatedAt = DateTime.UtcNow
     };
 
-    tickets.Add(ticket);
-// 201 Created + get ticket by id endpoint
+    db.Tickets.Add(ticket);
+    await db.SaveChangesAsync();
+
     return Results.Created($"/tickets/{ticket.Id}", ticket);
 });
 
-app.MapGet("/tickets", () => Results.Ok(tickets));
-
-app.MapGet("/tickets/{id:guid}", (Guid id) =>
+app.MapGet("/tickets", async (AppDbContext db) =>
 {
-    var ticket = tickets.FirstOrDefault(t => t.Id == id);
+    var list = await db.Tickets.OrderByDescending(t => t.CreatedAt).ToListAsync();
+    return Results.Ok(list);
+});
+
+app.MapGet("/tickets/{id:guid}", async (AppDbContext db, Guid id) =>
+{
+    var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
     return ticket is null ? Results.NotFound() : Results.Ok(ticket);
 });
 
-app.MapPatch("/tickets/{id:guid}/status", (Guid id, UpdateTicketStatusRequest request) =>
+
+app.MapPatch("/tickets/{id:guid}/status", async (AppDbContext db, Guid id, UpdateTicketStatusRequest request) =>
 {
-    var ticket = tickets.FirstOrDefault(t => t.Id == id);
+    var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
     if (ticket is null) return Results.NotFound();
 
     if (string.IsNullOrWhiteSpace(request.Status))
         return Results.BadRequest(new { error = "Status is required." });
 
-    // estados válidos
+    var status = request.Status.Trim();
     var valid = new[] { "Open", "InProgress", "Resolved" };
-    if (!valid.Contains(request.Status.Trim()))
+    if (!valid.Contains(status))
         return Results.BadRequest(new { error = "Invalid status." });
 
-    ticket.Status = request.Status.Trim();
+    ticket.Status = status;
+    await db.SaveChangesAsync();
+
     return Results.Ok(ticket);
 });
+
 
 app.Run();
 
